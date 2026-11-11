@@ -94,7 +94,11 @@ Screens.home = {
         </div>
       </section>
       <button class="conn ${inp.ok ? 'ok' : ''}" data-help>${inp.html}</button>
-      ${nxt ? `<button class="card continue" data-lesson="${nxt.id}" style="--u:${nxt.unit.color}">
+      ${Session.available() ? (() => { const S = Session.build(); return `<button class="card today-btn" data-today>
+        <div class="cont-emoji">☀️</div>
+        <div class="cont-txt"><small>About 10 minutes</small><b>Today's practice</b><span>${S.plan.map(p => p.replace(/^\S+\s/, '')).join(' · ')}</span></div>
+        <div class="cont-go">▶</div></button>`; })() : ''}
+      ${nxt ? `<button class="card continue${Session.available() ? ' slim' : ''}" data-lesson="${nxt.id}" style="--u:${nxt.unit.color}">
         <div class="cont-emoji">${nxt.unit.emoji}</div>
         <div class="cont-txt"><small>${Prog.doneCount() ? 'Up next' : 'Start here'} · ${nxt.unit.title}</small><b>${nxt.title}</b><span>${nxt.desc}</span></div>
         <div class="cont-go">▶</div></button>` : `<div class="card continue done"><b>You finished every lesson! 🏆</b><span>Keep polishing songs in the library.</span></div>`}
@@ -116,6 +120,7 @@ Screens.home = {
       App.go('lesson', { id: b.dataset.lesson });
     });
     root.querySelector('[data-help]').onclick = () => App.go('help');
+    root.querySelector('[data-today]')?.addEventListener('click', () => App.go('lesson', { session: true }));
     const off = Input.on('status', () => { if (App.current === 'home') App.go('home'); });
     App.onLeave(off);
   }
@@ -124,8 +129,8 @@ Screens.home = {
 // ---------- LESSON ----------
 Screens.lesson = {
   activity: true, tab: 'home',
-  render(root, { id }) {
-    const L = Lessons.byId[id]; let i = 0, cleanup = null; const stars = [];
+  render(root, { id, session }) {
+    const L = session ? Session.build() : Lessons.byId[id]; let i = 0, cleanup = null; const stars = [];
     root.innerHTML = `<div class="lesson" style="--u:${L.unit.color}">
       <div class="lesson-top"><button class="btn-icon" data-x aria-label="Close">✕</button><div class="lprog"><i></i></div><div class="ltitle">${L.title}</div></div>
       <div class="lesson-body"></div></div>`;
@@ -150,6 +155,19 @@ Screens.lesson = {
     };
     const finish = () => {
       const avg = stars.length ? Math.round(stars.reduce((a, b) => a + b, 0) / stars.length) : 3;
+      if (L.session) {
+        const lvl0 = Store.level(); Store.addXP(15); const streakUp = Store.touchStreak();
+        UI.confetti(); Sound.fanfare();
+        body.className = 'lesson-body';
+        body.innerHTML = `<div class="celebrate"><div class="big-emoji">☀️</div><h1>Warmed up!</h1>
+          <div class="rewards"><div><b>+15</b><small>XP</small></div><div><b>🔥 ${Store.streak()}</b><small>${streakUp ? 'streak +1!' : 'day streak'}</small></div>${Store.level() > lvl0 ? `<div><b>Lv ${Store.level()}</b><small>level up!</small></div>` : ''}</div>
+          <div class="over-btns">${L.next ? `<button class="btn primary big" data-next>Lesson ${Prog.idx(L.next.id) + 1}: ${L.next.title} →</button>` : `<button class="btn primary big" data-songs>Pick a song to polish →</button>`}
+          <button class="btn" data-home>Back to map</button></div></div>`;
+        body.querySelector('[data-next]')?.addEventListener('click', () => App.go('lesson', { id: L.next.id }));
+        body.querySelector('[data-songs]')?.addEventListener('click', () => App.go('songs'));
+        body.querySelector('[data-home]').onclick = () => App.go('home');
+        return;
+      }
       const first = !Store.data.lessons[id]?.done;
       const lvl0 = Store.level();
       Store.lessonDone(id, avg);
@@ -333,7 +351,8 @@ Screens.settings = {
       </div>
       <h3 class="sec">Learning</h3>
       <div class="card list">
-        ${tog('names', 'Show note names', 'Letters inside the notes and on the keys. Try turning it off as you improve!')}
+        ${tog('names', 'Show note names', 'Letters inside the notes and on the keys (while a song still has full hints)')}
+        ${tog('fadeHints', 'Fade hints as you improve', 'After 3 stars on a song, note names hide; later the keys only glow if you get stuck. Change it any time with 💡 in a song.')}
         ${tog('metronome', 'Metronome in Play mode', 'Clicks on every beat')}
         ${tog('keepAwake', 'Keep screen awake', Awake.supported ? 'Stops the screen dimming while Ivory is open' : 'Not supported in this browser — turn off Auto-Lock in your device settings instead')}
       </div>
@@ -345,6 +364,8 @@ Screens.settings = {
       </div>
       <h3 class="sec">Progress</h3>
       <div class="card list">
+        <button class="row" data-backup><div><b>Save a backup</b><small>${s.lastBackup ? 'Last saved ' + s.lastBackup : 'Saves stars, streak, XP and your own songs to a file'}</small></div><span class="chev">Save ›</span></button>
+        <label class="row"><div><b>Restore from backup</b><small>Pick a saved Ivory backup file — also how you move to a new device</small></div><span class="chev">Open ›</span><input type="file" accept=".json,application/json" hidden data-restore></label>
         ${tog('unlockAll', 'Unlock everything', 'Open all lessons and songs')}
         <button class="row danger" data-reset><div><b>Reset progress</b><small>Clear stars, streak and XP</small></div></button>
       </div>
@@ -361,6 +382,8 @@ Screens.settings = {
       if (e.target.checked) { try { await Input.startMic(); UI.toast('🎤 Listening'); } catch (err) { e.target.checked = false; UI.toast('Microphone permission was denied'); } }
       else Input.stopMic();
     };
+    root.querySelector('[data-backup]').onclick = () => Backup.save();
+    root.querySelector('[data-restore]').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) Backup.restore(f); };
     root.querySelector('[data-reset]').onclick = () => { if (confirm('Reset all progress? This cannot be undone.')) { Store.reset(); UI.toast('Progress reset'); App.go('home'); } };
   }
 };
@@ -390,6 +413,68 @@ Screens.help = {
     const off2 = Input.on('status', () => { if (App.current === 'help') App.go('help'); });
     App.onLeave(() => { off(); off2(); });
   }
+};
+
+// ---------- backup / restore ----------
+const Backup = {
+  async save() {
+    const name = `ivory-backup-${Store.today()}.json`;
+    const data = { app: 'ivory', v: 1, saved: new Date().toISOString(), store: Store.data, imports: Songs.imports.map(s => s.rec) };
+    const file = new File([JSON.stringify(data)], name, { type: 'application/json' });
+    const done = () => { Store.settings.lastBackup = Store.today(); Store.save(); if (App.current === 'settings') App.go('settings'); };
+    // iPad/iPhone: the share sheet offers "Save to Files", AirDrop, email…
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Ivory backup' }); done(); UI.toast('✅ Backup saved'); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    done(); UI.toast('✅ Backup downloaded');
+  },
+  async restore(file) {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch (e) { return UI.toast('😕 That file isn\'t an Ivory backup'); }
+    if (!data || data.app !== 'ivory' || !data.store) return UI.toast('😕 That file isn\'t an Ivory backup');
+    const lessons = Object.values(data.store.lessons || {}).filter(l => l.done).length;
+    if (!confirm(`Restore this backup from ${String(data.saved || '').slice(0, 10)}? (${lessons} lessons done, ${data.store.xp || 0} XP)\n\nThis replaces the progress on this device.`)) return;
+    Store.replace(data.store);
+    Songs.replaceImports(data.imports);
+    UI.toast('✅ Progress restored'); App.go('home');
+  }
+};
+
+// ---------- Today's practice: warm-up + review + next lesson ----------
+const Session = {
+  build() {
+    const done = id => !!Store.data.lessons[id]?.done;
+    const steps = [], plan = [];
+    // 1) warm-up matched to what she's learned
+    if (done('l9')) { steps.push({ type: 'drill', pool: [43, 45, 47, 48, 50, 52, 53, 55, 60, 62, 64, 65, 67, 69, 71, 72], rounds: 8, clef: 'auto' }); plan.push('🎼 Warm-up: read 8 notes'); }
+    else if (done('l5')) { steps.push({ type: 'drill', pool: [60, 62, 64, 65, 67, 69], rounds: 8, clef: 't' }); plan.push('🎼 Warm-up: read 8 notes'); }
+    else if (done('l1')) {
+      const pick = [{ prompt: 'Find any <b>C</b>', pcs: [0] }, { prompt: 'Find any <b>D</b>', pcs: [2] }, { prompt: 'Find any <b>E</b>', pcs: [4] }, { prompt: 'Find <b>Middle C</b>', notes: [60] }]
+        .concat(done('l2') ? [{ prompt: 'Find any <b>F</b>', pcs: [5] }, { prompt: 'Find any <b>G</b>', pcs: [7] }] : []);
+      steps.push({ type: 'find', targets: pick.sort(() => Math.random() - 0.5).slice(0, 4), kb: { lo: 48, hi: 72 } });
+      plan.push('🧭 Warm-up: find the keys');
+    }
+    // 2) review the song that needs it most (fewest stars, then longest since played)
+    const cands = Songs.list.filter(s => !/Exercise/.test(s.composer) && Store.data.songs[s.id] && Prog.songUnlocked(s));
+    cands.sort((a, b) => { const A = Store.data.songs[a.id], B = Store.data.songs[b.id]; return (A.stars - B.stars) || String(A.last || '').localeCompare(String(B.last || '')); });
+    const rev = cands[0];
+    if (rev) {
+      const both = rev.hasR && rev.hasL && done('l13');
+      const mode = Store.data.songs[rev.id].stars >= 3 ? 'play' : 'wait';
+      steps.push({ type: 'song', song: rev.id, hands: both ? 'B' : rev.hasR ? 'R' : 'L', mode, tempo: mode === 'play' ? 0.85 : 1 });
+      plan.push(`🔁 Review: ${rev.title}${mode === 'play' ? ' (Play mode)' : ''}`);
+    }
+    const next = Prog.next();
+    plan.push(next ? `⭐ Then: Lesson ${Prog.idx(next.id) + 1} — ${next.title}` : '⭐ Then: polish a favorite song');
+    steps.unshift({ type: 'info', title: 'Today\'s practice', html: `<p>About 10 minutes. Here's the plan:</p><ol class="plan">${plan.map(p => `<li>${p}</li>`).join('')}</ol><p>Short, regular practice beats long, rare sessions. Let's go!</p>` });
+    return { id: 'today', session: true, title: 'Today\'s practice', unit: { color: '#ff7a59' }, steps, next, plan };
+  },
+  available() { return !!Store.data.lessons.l1?.done; }
 };
 
 // ---------- keep the screen awake while the app is open ----------

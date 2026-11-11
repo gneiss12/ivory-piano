@@ -90,7 +90,7 @@ const Staff = (() => {
     setScore({ items, ppb = 70, beats = 0, pickup = 0, len = 0, ts = '', names = false, dimHands = [] }) {
       this.ts = ts; this.clefW = ts ? 84 : 58; this.ppb = ppb;
       this.layout();
-      const g = this.gScroll; g.innerHTML = '';
+      const g = this.gScroll; g.innerHTML = ''; this.region = null;
       this.noteEls.clear(); this.evEls.clear(); this.cur = [];
       const gap = Math.min(22, ppb * 0.32);
       if (beats) {
@@ -146,6 +146,14 @@ const Staff = (() => {
         el('circle', { cx: x - 2, cy: y - 4, r: 2.4, class: 'rest' }, g);
         el('path', { d: `M${x - 2} ${y - 3} q 4 1 6 -3 l -5 14`, class: 'rest-line' }, g);
       }
+    }
+    // shaded band behind a looped range of the score (t0 = null clears it)
+    setRegion(t0, t1) {
+      this.region?.remove(); this.region = null;
+      if (t0 == null) return;
+      const gap = Math.min(22, this.ppb * 0.32);
+      this.region = el('rect', { x: t0 * this.ppb - gap, y: 40, width: (t1 - t0) * this.ppb, height: 180, rx: 10, class: 'loop-region' });
+      this.gScroll.insertBefore(this.region, this.gScroll.firstChild);
     }
     setOffset(t, smooth) {
       this.t = t;

@@ -8,7 +8,7 @@ const Store = (() => {
     lessons: {}, songs: {}, xp: 0,
     streak: { count: 0, last: null, best: 0 },
     daily: {}, noteStats: {}, questBest: {},
-    settings: { name: '', names: true, synthOnMidi: false, goalMin: 10, unlockAll: false, metronome: true, keepAwake: true }
+    settings: { name: '', names: true, synthOnMidi: false, goalMin: 10, unlockAll: false, metronome: true, keepAwake: true, fadeHints: true, lastBackup: null }
   });
   let s = defaults();
   try {
@@ -48,7 +48,16 @@ const Store = (() => {
     addSeconds(n) { const t = today(); s.daily[t] = (s.daily[t] || 0) + n; dirty = true; },
     todaySeconds() { return s.daily[today()] || 0; },
     lessonDone(id, stars) { const p = s.lessons[id] || {}; p.done = true; p.stars = Math.max(p.stars || 0, stars); s.lessons[id] = p; save(); },
-    songResult(id, stars) { const p = s.songs[id] || { plays: 0, stars: 0 }; p.plays++; p.stars = Math.max(p.stars, stars); s.songs[id] = p; save(); },
+    songResult(id, stars) { const p = s.songs[id] || { plays: 0, stars: 0 }; p.plays++; p.stars = Math.max(p.stars, stars); p.last = today(); s.songs[id] = p; save(); },
+    setHint(id, lvl) { const p = s.songs[id] || { plays: 0, stars: 0 }; p.hint = lvl; s.songs[id] = p; save(); },
+    // backup / restore
+    replace(obj) {
+      const d = defaults();
+      s = Object.assign(d, obj);
+      s.settings = Object.assign(d.settings, obj.settings || {});
+      s.streak = Object.assign(d.streak, obj.streak || {});
+      save();
+    },
     noteResult(m, ok) { const p = s.noteStats[m] || { seen: 0, wrong: 0 }; p.seen++; if (!ok) p.wrong++; s.noteStats[m] = p; dirty = true; },
     reset() { const keep = s.settings; s = defaults(); s.settings = keep; save(); }
   };

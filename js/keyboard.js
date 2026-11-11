@@ -45,7 +45,7 @@ class PianoKeyboard {
   render() {
     this.el.innerHTML = ''; this.keyEls.clear();
     const whites = []; for (let m = this.lo; m <= this.hi; m++) if (!isBlack(m)) whites.push(m);
-    const w = 100 / whites.length, names = Store.settings.names;
+    const w = 100 / whites.length, names = this.opts.names ?? Store.settings.names;
     whites.forEach((m, i) => {
       const k = document.createElement('div');
       k.className = 'key white' + (m === 60 ? ' middle-c' : '');

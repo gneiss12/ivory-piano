@@ -159,5 +159,11 @@ const Songs = (() => {
   }
   function removeImport(id) { const i = imports.findIndex(s => s.id === id); if (i >= 0) imports.splice(i, 1); delete byId[id]; saveImports(); }
 
-  return { list: LIST, byId, imports, pitch, fromMidi, nameOf, mini, addImport, removeImport };
+  function replaceImports(recs) {
+    imports.forEach(s => delete byId[s.id]); imports.length = 0;
+    (recs || []).forEach(r => { try { const s = buildImport(r); imports.push(s); byId[s.id] = s; } catch (e) {} });
+    saveImports();
+  }
+
+  return { list: LIST, byId, imports, pitch, fromMidi, nameOf, mini, addImport, removeImport, replaceImports };
 })();
