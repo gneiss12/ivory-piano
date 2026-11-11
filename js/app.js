@@ -100,7 +100,7 @@ Screens.home = {
         <div class="cont-go">▶</div></button>` : `<div class="card continue done"><b>You finished every lesson! 🏆</b><span>Keep polishing songs in the library.</span></div>`}
       <div class="path">${Lessons.units.map(u => `
         <section class="unit" style="--u:${u.color}">
-          <div class="unit-head"><span>${u.emoji}</span><div><small>Unit ${u.id.slice(1)}</small><b>${u.title}</b></div></div>
+          <div class="unit-head"><span>${u.emoji}</span><div><small>Unit ${Lessons.units.indexOf(u) + 1}</small><b>${u.title}</b></div></div>
           <div class="nodes">${u.lessons.map((l, j) => {
             const i = Prog.idx(l.id), done = Store.data.lessons[l.id]?.done, open = Prog.unlocked(i), isNext = nxt && nxt.id === l.id;
             const off = [0, 1, 1.4, 1, 0, -1, -1.4, -1][j % 8];
@@ -192,7 +192,19 @@ Screens.songs = {
   render(root) {
     const lvls = ['', 'Beginner', 'Beginner+', 'Hands together', 'Intermediate', 'Challenge'];
     const list = Songs.list.filter(s => !/Exercise/.test(s.composer));
+    const mine = Songs.imports;
     root.innerHTML = `<div class="page"><header class="page-head"><h1>Songs</h1><p>Every song you unlock stays here to practice and perfect.</p></header>
+      <h3 class="sec">⭐ My songs</h3>
+      <div class="song-list">
+        ${mine.map(s => `<div class="song-card own"><button class="song-open" data-song="${s.id}">
+          <div class="song-ico" style="--h:330">♥</div>
+          <div class="song-txt"><b>${UI.esc(s.title)}</b><small>${s.notes.length} notes · ${s.hasL && s.hasR ? 'both hands' : s.hasR ? 'right hand' : 'left hand'}</small></div>
+          <div class="song-stars">${UI.starsHTML(Store.data.songs[s.id]?.stars || 0)}</div></button>
+          <button class="del" data-del="${s.id}" aria-label="Remove">✕</button></div>`).join('')}
+        <label class="song-card add"><div class="song-ico">＋</div><div class="song-txt"><b>Add your own song</b><small>Open a MIDI file (.mid) — easy piano versions work best</small></div>
+          <input type="file" accept=".mid,.midi,.kar,audio/midi,audio/x-midi" hidden data-file></label>
+      </div>
+      <h3 class="sec">🎼 Library</h3>
       <div class="song-list">${list.map(s => {
         const open = Prog.songUnlocked(s), p = Store.data.songs[s.id];
         return `<button class="song-card ${open ? '' : 'locked'}" data-song="${s.id}">
@@ -205,6 +217,19 @@ Screens.songs = {
       const s = Songs.byId[b.dataset.song];
       if (!Prog.songUnlocked(s)) return UI.toast(`🔒 Unlocks at Lesson ${Prog.idx(s.unlock) + 1}: ${Lessons.byId[s.unlock].title}`);
       App.go('song', { id: s.id });
+    });
+    root.querySelector('[data-file]').onchange = async e => {
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+      try {
+        const rec = await MidiImport.fromFile(f);
+        const s = Songs.addImport(rec);
+        UI.toast(`🎉 Added “${UI.esc(s.title)}”`);
+        App.go('song', { id: s.id });
+      } catch (err) { UI.toast('😕 ' + UI.esc(err.message || 'Could not read that file')); }
+    };
+    root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+      const s = Songs.byId[b.dataset.del];
+      if (s && confirm(`Remove “${s.title}” from your songs?`)) { Songs.removeImport(s.id); App.go('songs'); }
     });
   }
 };

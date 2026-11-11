@@ -121,6 +121,28 @@ const Lessons = (() => {
         { type: 'song', song: 'saints', hands: 'B', mode: 'play', tempo: 0.7 }
       ] }
     ] },
+    { id: 'u6', title: 'Play Pop', color: '#8b5cf6', emoji: '🎤', lessons: [
+      { id: 'p1', title: 'The Pop Chord Secret', desc: 'Four chords, thousands of songs', steps: [
+        { type: 'info', title: 'Two new chords', html: '<p>You know <b>C</b> and <b>F</b>. Two more and you can play along with a huge amount of pop music:</p><ul><li><b>G</b> = B – D – G (left-hand fingers 5, 3, 1)</li><li><b>A minor (Am)</b> = A – C – E (fingers 5, 3, 1)</li></ul><p>“Minor” chords sound a little sad or dreamy. Listen for it!</p>',
+          kb: { lo: 43, hi: 64, marks: L([45, 48, 52], [5, 3, 1]) } },
+        { type: 'find', prompt: 'Play the <b>G chord</b> (B – D – G)', notes: [47, 50, 55], h: 'L', fingers: [5, 3, 1], reps: 2, kb: { lo: 43, hi: 64 } },
+        { type: 'find', prompt: 'Play the <b>A minor chord</b> (A – C – E)', notes: [45, 48, 52], h: 'L', fingers: [5, 3, 1], reps: 3, kb: { lo: 43, hi: 64 } },
+        { type: 'info', title: 'The four chords', html: '<p>Here\'s the secret: <b>C → G → Am → F</b>, played over and over, is the backbone of songs like <i>Let It Be</i>, <i>Don\'t Stop Believin\'</i>, <i>I\'m Yours</i> and <i>Someone Like You</i> (in their own keys).</p><p>Play each chord for 4 slow counts. Notice how your hand barely moves!</p>' },
+        { type: 'song', song: 'fourchords', hands: 'L' }
+      ] },
+      { id: 'p2', title: 'Pop Groove', desc: 'Chords in a rhythm, both hands', steps: [
+        { type: 'info', title: 'Make it groove', html: '<p>Now the <b>right hand plays the chords</b> in a rhythm — long, short, short: “<b>1</b> – 2, <b>3</b>, <b>4</b>” — while the <b>left hand plays one bass note</b>.</p><p>The right-hand shapes stay close to Middle C, so only one or two fingers move between chords.</p>' },
+        { type: 'song', song: 'popgroove', hands: 'R' },
+        { type: 'song', song: 'popgroove', hands: 'B' },
+        { type: 'song', song: 'popgroove', hands: 'B', mode: 'play', tempo: 0.8 }
+      ] },
+      { id: 'p3', title: 'Play Along with Any Song', desc: 'Ballad style + using chord charts', steps: [
+        { type: 'info', title: 'Ballad style', html: '<p>For slow songs, play the chord <b>one note at a time</b> (a “broken chord”). Same four chords, in a different order: <b>Am → F → C → G</b>. Sound familiar?</p>' },
+        { type: 'song', song: 'popballad', hands: 'R' },
+        { type: 'song', song: 'popballad', hands: 'B' },
+        { type: 'info', title: 'Play along with real songs', html: '<p>Search online for “<i>song name</i> <b>easy piano chords</b>”. You\'ll get the lyrics with chord names above them.</p><p>Play each chord when it appears — with the groove or ballad pattern — and sing or play along with the recording. Stick to songs that use <b>C, G, Am and F</b> for now.</p><p>Want the actual melody? Get a MIDI file of the song (easy piano versions are sold on sheet-music sites) and add it under <b>Songs → Add your own song</b>.</p>' }
+      ] }
+    ] },
     { id: 'u5', title: 'Real Repertoire', color: '#e11d48', emoji: '🎹', lessons: [
       { id: 'l18', title: 'Sharps & Flats', desc: 'Naming the black keys', steps: [
         { type: 'info', title: 'Black keys have names', html: '<p>A <b>sharp ♯</b> means play the key just to the <b>right</b>. A <b>flat ♭</b> means the key just to the <b>left</b>.</p><p>So <b>F♯</b> is the black key right after F. (The same key can also be called G♭.)</p>',

@@ -4,7 +4,7 @@
 const Songs = (() => {
   const LET = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 }, SEMI = [0, 2, 4, 5, 7, 9, 11];
   const DUR = { w: 4, h: 2, q: 1, e: 0.5, s: 0.25 };
-  const CH = { C: ['C3+E3+G3', '531'], G7: ['B2+F3+G3', '521'], F: ['C3+F3+A3', '521'] };
+  const CH = { C: ['C3+E3+G3', '531'], G7: ['B2+F3+G3', '521'], F: ['C3+F3+A3', '521'], G: ['B2+D3+G3', '531'], Am: ['A2+C3+E3', '531'] };
   const SHARP = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 
   function pitch(s) {
@@ -37,10 +37,15 @@ const Songs = (() => {
   function compile(s) {
     const r = s.rh ? voice(s.rh, 'R') : { items: [], len: 0 };
     const l = s.lh ? voice(s.lh, 'L') : { items: [], len: 0 };
-    s.items = [...r.items, ...l.items].sort((a, b) => a.t - b.t);
-    s.notes = s.items.filter(n => !n.rest);
+    s.items = [...r.items, ...l.items];
     s.len = Math.max(r.len, l.len);
-    s.hasR = r.items.some(n => !n.rest); s.hasL = l.items.some(n => !n.rest);
+    return finalize(s);
+  }
+  function finalize(s) {
+    s.items.sort((a, b) => a.t - b.t);
+    s.notes = s.items.filter(n => !n.rest);
+    if (!s.len) s.len = Math.max(...s.items.map(n => n.t + n.d));
+    s.hasR = s.notes.some(n => n.h === 'R'); s.hasL = s.notes.some(n => n.h === 'L');
     s.beats = s.beats || 4; s.pickup = s.pickup || 0; s.bpm = s.bpm || 90;
     if (s.ts === undefined) s.ts = s.beats + '/4';
     const minD = Math.min(...s.notes.map(n => n.d));
@@ -95,11 +100,64 @@ const Songs = (() => {
       rh: 'E5s5 D#5s4 | E5s5 D#5s4 E5s5 B4s2 D5s4 C5s3 | A4e1 rs C4s1 E4s2 A4s3 | B4e4 rs E4s1 G#4s3 B4s4 | C5e5 rs E4s1 E5s5 D#5s4 | E5s5 D#5s4 E5s5 B4s2 D5s4 C5s3 | A4e1 rs C4s1 E4s2 A4s3 | B4e4 rs E4s1 C5s4 B4s3 | A4q.2',
       lh: 're | rq. | A2s5 E3s2 A3s1 rs re | E2s5 E3s2 G#3s1 rs re | A2s5 E3s2 A3s1 rs re | rq. | A2s5 E3s2 A3s1 rs re | E2s5 E3s2 G#3s1 rs re | A2s5 E3s2 A3s1 rs re' }
   ];
+
+  // ----- generated pieces -----
+  // Bach Prelude in C: each bar = [a b c d e c d e] twice. LH plays a,b (an octave lower), RH answers with c d e c d e.
+  const PRE = [['C4', 'E4', 'G4', 'C5', 'E5'], ['C4', 'D4', 'A4', 'D5', 'F5'], ['B3', 'D4', 'G4', 'D5', 'F5'], ['C4', 'E4', 'G4', 'C5', 'E5'],
+    ['C4', 'E4', 'A4', 'E5', 'A5'], ['C4', 'D4', 'F#4', 'A4', 'D5'], ['B3', 'D4', 'G4', 'D5', 'G5'], ['B3', 'C4', 'E4', 'G4', 'C5'], ['C4', 'E4', 'G4', 'C5', 'E5']];
+  const down = p => p.replace(/\d$/, o => +o - 1);
+  const preRH = PRE.map(([, , c, d, e]) => `re ${c}s ${d}s ${e}s ${c}s ${d}s ${e}s `.repeat(2)).join('| ') + '| C4+E4+G4+C5w';
+  const preLH = PRE.map(([a, b]) => `${down(a)}s ${down(b)}s rq. `.repeat(2)).join('| ') + '| C3w';
+
+  // Pop chords in right-hand position (close to Middle C) and their bass notes
+  const POP = { C: ['C4+E4+G4', '135', 'C3'], G: ['B3+D4+G4', '125', 'G2'], Am: ['C4+E4+A4', '125', 'A2'], F: ['C4+F4+A4', '135', 'F2'] };
+  const groove = seq => seq.map(c => { const [n, f] = POP[c]; return `${n}h${f} ${n}q${f} ${n}q${f}`; }).join(' | ');
+  const roots = seq => seq.map(c => POP[c][2] + 'w').join(' | ');
+  const broken = seq => seq.map(c => { const ns = POP[c][0].split('+'), fs = POP[c][1]; const pat = [0, 1, 2, 1, 0, 1, 2, 1]; return pat.map(i => ns[i] + 'e' + fs[i]).join(' '); }).join(' | ');
+  const P1 = ['C', 'G', 'Am', 'F'], P2 = ['Am', 'F', 'C', 'G'];
+
+  LIST.push(
+    { id: 'fourchords', title: 'The Four Chords', composer: 'Pop progression', level: 3, bpm: 76, unlock: 'p1',
+      lh: '[C]w | [G]w | [Am]w | [F]w | [C]w | [G]w | [Am]w | [F]w | [C]w' },
+    { id: 'popgroove', title: 'Pop Groove (C–G–Am–F)', composer: 'Pop progression', level: 3, bpm: 84, unlock: 'p2',
+      rh: groove([...P1, ...P1]) + ' | C4+E4+G4w135', lh: roots([...P1, ...P1]) + ' | C3w' },
+    { id: 'popballad', title: 'Ballad Groove (Am–F–C–G)', composer: 'Pop progression', level: 3, bpm: 76, unlock: 'p3',
+      rh: broken([...P2, ...P2]) + ' | C4+E4+A4w125', lh: roots([...P2, ...P2]) + ' | A2w' },
+    { id: 'auld', title: 'Auld Lang Syne', composer: 'Scottish traditional', level: 3, bpm: 84, pickup: 1, unlock: 'l16',
+      rh: 'G4q1 | C5q.2 C5e2 C5q2 E5q4 | D5q.3 C5e2 D5q3 E5q4 | C5q.2 C5e2 E5q4 G5q5 | A5h.5 A5q5 | G5q. E5e E5q C5q | D5q.3 C5e2 D5q3 E5q4 | C5q.2 A4e1 A4q1 G4q1 | C5h.2',
+      lh: 'rq | [C]w | [G7]w | [C]w | [F]w | [C]w | [G7]w | [F]h [G7]h | [C]h.' },
+    { id: 'mountain', title: 'In the Hall of the Mountain King', composer: 'Edvard Grieg', level: 4, bpm: 100, unlock: 'l18',
+      rh: ('A4e1 B4e2 C5e3 D5e4 E5e5 C5e3 E5q5 | D#5e4 B4e2 D#5q4 D5e4 A#4e2 D5q4 | A4e1 B4e2 C5e3 D5e4 E5e5 C5e3 E5e5 A5e5 | G5e4 E5e2 C5e1 E5e2 G5h4 | ').repeat(2).replace(/\| $/, ''),
+      lh: 'A2q E3q A2q E3q | E2q B2q E2q B2q | A2q E3q A2q E3q | C3q G3q C3h | '.repeat(2).replace(/\| $/, '') },
+    { id: 'greensleeves', title: 'Greensleeves', composer: 'English traditional', level: 4, bpm: 90, beats: 3, pickup: 1, unlock: 'l18',
+      rh: 'A4q1 | C5h2 D5q3 | E5q.4 F5e5 E5q4 | D5h3 B4q1 | G4q. A4e B4q | C5h A4q | A4q. G#4e A4q | B4h G#4q | E4h A4q | C5h2 D5q3 | E5q.4 F5e5 E5q4 | D5h3 B4q1 | G4q. A4e B4q | C5q. B4e A4q | G#4q. F#4e G#4q | A4h.',
+      lh: 'rq | A2h. | C3h. | G2h. | E2h. | A2h. | F2h. | E2h. | E2h. | A2h. | C3h. | G2h. | E2h. | F2h. | E2h. | A2h.' },
+    { id: 'nachtmusik', title: 'Eine kleine Nachtmusik (opening)', composer: 'W. A. Mozart', level: 4, bpm: 112, unlock: 'l20',
+      rh: 'G4q1 re D4e1 G4q1 re D4e1 | G4e3 D4e1 G4e3 B4e4 D5h5 | C5q4 re A4e2 C5q4 re A4e2 | C5e5 A4e3 F#4e2 A4e3 D4h1 | G4q1 re D4e1 G4q1 re D4e1 | G4e3 D4e1 G4e3 B4e4 D5h5 | C5q4 re A4e2 C5q4 re A4e2 | C5e5 A4e3 F#4e2 A4e3 G4h4',
+      lh: 'G2w | G2w | D3w | D3w | G2w | G2w | D3w | D3h G2h' },
+    { id: 'prelude', title: 'Prelude in C (easy)', composer: 'J. S. Bach', level: 4, bpm: 66, unlock: 'l19', rh: preRH, lh: preLH }
+  );
   LIST.forEach(compile);
   const byId = Object.fromEntries(LIST.map(s => [s.id, s]));
 
   // small inline example scores for lesson cards
   function mini(spec) { return compile({ id: 'mini' + (uid++), rh: spec.rh, lh: spec.lh, beats: spec.beats || 4, ts: '' }); }
 
-  return { list: LIST, byId, pitch, fromMidi, nameOf, mini };
+  // ----- the player's own imported songs (from MIDI files) -----
+  const IKEY = 'ivory.imports';
+  const imports = [];
+  function buildImport(rec) {
+    const items = rec.notes.map(([t, d, m, h]) => ({ id: 'n' + (uid++), ...fromMidi(m), t, d, h, f: 0, dot: d === 3 || d === 1.5 || d === 0.75 }));
+    return finalize({ id: rec.id, title: rec.title, composer: 'My song', level: 0, own: true, bpm: rec.bpm, beats: rec.beats, ts: rec.ts, pickup: 0, items, rec });
+  }
+  function saveImports() { try { localStorage.setItem(IKEY, JSON.stringify(imports.map(s => s.rec))); return true; } catch (e) { return false; } }
+  try { (JSON.parse(localStorage.getItem(IKEY) || '[]')).forEach(r => { const s = buildImport(r); imports.push(s); byId[s.id] = s; }); } catch (e) {}
+  function addImport(rec) {
+    const s = buildImport(rec); imports.unshift(s); byId[s.id] = s;
+    if (!saveImports()) { imports.shift(); delete byId[s.id]; throw new Error('Not enough storage space on this device'); }
+    return s;
+  }
+  function removeImport(id) { const i = imports.findIndex(s => s.id === id); if (i >= 0) imports.splice(i, 1); delete byId[id]; saveImports(); }
+
+  return { list: LIST, byId, imports, pitch, fromMidi, nameOf, mini, addImport, removeImport };
 })();

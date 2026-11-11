@@ -104,6 +104,11 @@ body.in-activity #tabs { display: none; }
 @media (min-width: 700px) { .song-list { grid-template-columns: 1fr 1fr; } }
 .song-card { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 18px; padding: 12px; box-shadow: var(--shadow); }
 .song-card.locked { opacity: .55; }
+.song-card.own { padding: 0; }
+.song-open { flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px; min-width: 0; }
+.song-card .del { width: 40px; align-self: stretch; color: var(--muted); font-size: 16px; border-left: 1px solid var(--line); flex: none; }
+.song-card.add { cursor: pointer; border: 2px dashed #d9d0c3; box-shadow: none; background: transparent; }
+.song-card.add .song-ico { background: var(--accent); font-size: 28px; }
 .song-ico { width: 50px; height: 50px; border-radius: 14px; flex: none; display: grid; place-items: center; font-size: 24px; color: #fff; background: hsl(var(--h) 70% 62%); }
 .song-card.locked .song-ico { background: #d9d2c7; font-size: 18px; }
 .song-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
