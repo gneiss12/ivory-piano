@@ -310,6 +310,7 @@ Screens.settings = {
       <div class="card list">
         ${tog('names', 'Show note names', 'Letters inside the notes and on the keys. Try turning it off as you improve!')}
         ${tog('metronome', 'Metronome in Play mode', 'Clicks on every beat')}
+        ${tog('keepAwake', 'Keep screen awake', Awake.supported ? 'Stops the screen dimming while Ivory is open' : 'Not supported in this browser — turn off Auto-Lock in your device settings instead')}
       </div>
       <h3 class="sec">Keyboard & sound</h3>
       <div class="card list">
@@ -324,7 +325,10 @@ Screens.settings = {
       </div>
       <p class="foot">Ivory · ${Lessons.flat.length} lessons · ${Songs.list.length} pieces · all music public domain<br>On a computer you can also play with keys A W S E D F T G Y H U J K (Z/X change octave)</p>
     </div>`;
-    root.querySelectorAll('[data-k]').forEach(c => c.onchange = () => { s[c.dataset.k] = c.checked; Store.save(); });
+    root.querySelectorAll('[data-k]').forEach(c => c.onchange = () => {
+      s[c.dataset.k] = c.checked; Store.save();
+      if (c.dataset.k === 'keepAwake') c.checked ? Awake.acquire() : Awake.release();
+    });
     root.querySelector('[data-name]').oninput = e => { s.name = e.target.value.trim(); Store.save(); };
     root.querySelector('[data-goal]').onchange = e => { s.goalMin = +e.target.value; Store.save(); };
     root.querySelector('[data-help]').onclick = () => App.go('help');
@@ -362,6 +366,24 @@ Screens.help = {
     App.onLeave(() => { off(); off2(); });
   }
 };
+
+// ---------- keep the screen awake while the app is open ----------
+const Awake = (() => {
+  let lock = null;
+  async function acquire() {
+    if (!Store.settings.keepAwake || lock || document.hidden || !('wakeLock' in navigator)) return;
+    try {
+      lock = await navigator.wakeLock.request('screen');
+      lock.addEventListener('release', () => { lock = null; });
+    } catch (e) { lock = null; }
+  }
+  async function release() { try { await lock?.release(); } catch (e) {} lock = null; }
+  // the OS drops the lock when the app is hidden; grab it again on return / on any tap
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) acquire(); });
+  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, acquire, { passive: true }));
+  Input.on('noteon', () => { if (!lock) acquire(); });
+  return { acquire, release, supported: 'wakeLock' in navigator };
+})();
 
 // ---------- boot ----------
 Input.initMIDI();

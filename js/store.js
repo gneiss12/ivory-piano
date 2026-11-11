@@ -8,7 +8,7 @@ const Store = (() => {
     lessons: {}, songs: {}, xp: 0,
     streak: { count: 0, last: null, best: 0 },
     daily: {}, noteStats: {}, questBest: {},
-    settings: { name: '', names: true, synthOnMidi: false, goalMin: 10, unlockAll: false, metronome: true }
+    settings: { name: '', names: true, synthOnMidi: false, goalMin: 10, unlockAll: false, metronome: true, keepAwake: true }
   });
   let s = defaults();
   try {
